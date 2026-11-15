@@ -14,6 +14,13 @@ out/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
+.gitignore
+*.iml
+.spec.txt
+.out
+.idea/
+*class
+target/
 
 ### NetBeans ###
 /nbproject/private/
