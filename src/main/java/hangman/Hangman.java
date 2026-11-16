@@ -1,11 +1,7 @@
 package hangman;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -19,18 +15,21 @@ public class Hangman {
 
     private static final List<String> WORDS = new ArrayList<>();
     private static final Set<Character> GUESSED_LETTERS = new HashSet<>();
+    private static final String PATH = "words.txt";
 
     private static String chosenWord;
-    private static char[] maskedWord;
+    private static List<Character> maskedWord;
 
     private static final Scanner scanner = new Scanner(System.in);
+    private final static InputValidator validator = new InputValidator();
+    private final static WordsLoader loader = new WordsLoader();
 
     public static void startGame(boolean isThatFirstLaunch) {
         if (isThatFirstLaunch) {
             userStartDialog();
         }
 
-        loadWords();
+        loader.loadWords(WORDS, PATH);
         chooseRandomWord();
 
         System.out.println("You have " + USER_ATTEMPTS + " attempts to guess the word");
@@ -51,11 +50,11 @@ public class Hangman {
         if (USER_ATTEMPTS == 0) {
             System.out.println("You lost");
         }
-        System.out.println("Game is over.\nThe word was: " + chosenWord);
         System.out.println("Do you want to play again?[y/n]");
+        System.out.println("Game is over.\nThe word was: " + chosenWord);
         String userPlayAgainAnswer = scanner.next();
         if (userPlayAgainAnswer.toLowerCase(Locale.ROOT).equals("y")) {
-            startNewRound();
+            clearContextAndStartNewRound();
         } else {
             System.out.println("Bye");
         }
@@ -75,28 +74,10 @@ public class Hangman {
         }
     }
 
-    private static void loadWords() {
-        if (!WORDS.isEmpty()) {
-            return;
-        }
-
-        File filePath = new File("src/main/resources/words.txt");
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                WORDS.add(line);
-            }
-        } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
-            System.exit(0);
-        }
-    }
-
     private static void chooseRandomWord() {
         Random randomComputer = new Random();
         chosenWord = WORDS.get(randomComputer.nextInt(WORDS.size()));
-        maskedWord = new char[chosenWord.length()];
-        Arrays.fill(maskedWord, '*');
+        maskedWord = new ArrayList<>(Collections.nCopies(chosenWord.length(), '*'));
     }
 
     private static void printMask() {
@@ -110,7 +91,7 @@ public class Hangman {
     private static void playerGuess() {
         System.out.print("Insert letter: ");
         String userInput = scanner.next();
-        while (!isUserInputCorrect(userInput)) {
+        while (!validator.isUserInputValid(userInput)) {
             System.out.print("Insert letter: ");
             userInput = scanner.next();
         }
@@ -122,7 +103,7 @@ public class Hangman {
 
         for (int i = 0; i < chosenWord.length(); i++) {
             if (chosenWord.charAt(i) == guessLetter) {
-                maskedWord[i] = guessLetter;
+                maskedWord.set(i, guessLetter);
                 isCorrectGuess = true;
             }
         }
@@ -134,29 +115,25 @@ public class Hangman {
                 System.out.println("You guessed wrong");
                 USER_ATTEMPTS--;
             } else {
-                System.out.println("You already inserted: " + guessLetter);
+                System.out.println("You already insert: " + guessLetter);
             }
         }
     }
 
-    private static boolean isWordGuessed() {
-        return new String(maskedWord).equals(chosenWord);
-    }
-
-    private static boolean isUserInputCorrect(String userInput) {
-        if (!userInput.matches("[A-Za-z]")) {
-            System.out.println("Hangman applies only English letters by a letter");
-            return false;
-        }
-        return true;
-    }
-
-    private static void startNewRound() {
+    private static void clearContextAndStartNewRound() {
         USER_ATTEMPTS = AttemptsToGuess.ATTEMPTS.getAttempts();
         WORDS.clear();
         GUESSED_LETTERS.clear();
         chosenWord = null;
         maskedWord = null;
         startGame(false);
+    }
+
+    private static boolean isWordGuessed() {
+        StringBuilder result = new StringBuilder();
+        for (Character c : maskedWord) {
+            result.append(c);
+        }
+        return result.toString().equals(chosenWord);
     }
 }
